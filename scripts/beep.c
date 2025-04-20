@@ -1,46 +1,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
+#include <sys/wait.h>
 
+// rm ./beep && gcc -o beep ./scripts/beep.c && chmod +x ./beep
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s [--span SECONDS] command [args...]\n", argv[0]);
+    printf("beep🚨 v0.1.0\n");
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <interval_seconds> command [args...]\n", argv[0]);
         return 1;
-    }
+    };
 
-    int span = 1;
-    int cmd_start = 1;
-
-    // Check if --span is specified
-    if (argc > 2 && strcmp(argv[1], "--span") == 0) {
-        span = atoi(argv[2]);
-        if (span <= 0) {
-            fprintf(stderr, "Invalid span value. Must be a positive integer.\n");
-            return 1;
-        }
-        cmd_start = 3;
-    }
-
-    if (cmd_start >= argc) {
-        fprintf(stderr, "No command provided to execute.\n");
+    int span = atoi(argv[1]);
+    if (span <= 0) {
+        fprintf(stderr, "Invalid interval. Must be a positive integer.\n");
         return 1;
-    }
+    };
 
     while (1) {
         pid_t pid = fork();
         if (pid == 0) { // Child process
-            execvp(argv[cmd_start], &argv[cmd_start]);
+            execvp(argv[2], &argv[2]);
             perror("execvp failed");
             exit(1);
         } else if (pid > 0) { // Parent process
-            wait(NULL); // Wait for child to finish
+            wait(NULL); // Wait for child
             sleep(span);
         } else {
             perror("fork failed");
             return 1;
         }
     }
+
     return 0;
 }
-
