@@ -1,0 +1,93 @@
+#!/bin/bash
+function _ask(){
+  category="$1";
+  question="$2";
+
+  if [ "$category" == "0" ]; then
+    category="green";
+  elif [ "$category" == "1" ]; then
+    category="yellow";
+  elif [ "$category" == "2" ]; then
+    category="red";
+  fi
+
+  echo $(col "$category" "$question");
+  read -p "y/n: " yn;
+  case $yn in
+    [Yy]* ) return 0;;
+    [Nn]* ) return 1;;
+    * ) echo "Please answer yes or no."; return 1;;
+  esac
+}
+
+function _langs() {
+  _ask 0 "Delete lang tools? (rustup, go, ruby, swift)" || return;
+
+  rustup toolchain uninstall nightly;
+  npm cache clean --force;
+  pnpm store prune;
+  sudo rm -rf ~/Documents/Github.nosync/**/node_modules;
+  xcrun simctl delete all;
+  go clean -cache;
+  gem cleanup;
+  conda clean --all -y;
+  sudo rm -rf ~/Documents/Github.nosync/**/__pycache__;
+}
+
+function _docker_brew() {
+  _ask 1 "Docker/Brew cleanup?" || return;
+
+  if ! docker info &> /dev/null; then
+    echo $(col yellow "Docker not running - skipping");
+  else
+    docker rm $(docker ps -aqf status=exited);
+    docker rmi $(docker images -qf dangling=true);
+    docker volume rm $(docker volume ls -qf dangling=true);
+  fi
+  brew autoremove;
+  brew cleanup --prune=0;
+}
+
+function _gits() {
+  _ask 0 "Git Compression?" || return;
+
+  BASE=~/Documents/Github.nosync;
+  cd $BASE;
+  gits=$(find . -type d -name ".git" | grep -vE "node_modules" | sed 's/\.git//' | sed 's/.\///');
+  for gt in $gits; do
+    cd "./$gt";
+    remote=$(git remote get-url origin 2> /dev/null);
+    if [[ $remote == *"https"* ]]; then
+      git gc --prune=now;
+    fi
+    cd $BASE;
+  done
+}
+
+function _caches() {
+  _ask 2 "Deeper caches? (.npm, go/pkg, Library/Caches, pycache)" || return;
+
+  sudo rm -rf ~/.npm/_npx;
+  sudo rm -rf ~/Library/Caches/org.swift.swiftpm/repositories;
+  sudo rm -rf ~/Library/Developer/Xcode/*DeviceSupport;
+  sudo rm -rf /Library/Developer/Xcode/DerivedData/*;
+  sudo rm -rf ~/go/pkg;
+  sudo rm -rf ~/Library/Caches/pip;
+  sudo rm -rf ~/.cache/pip;
+}
+
+function bar() {
+  echo "===================="
+  echo "$1"
+  echo "===================="
+}
+
+bar "Language Tooling Purge";
+_langs;
+bar "Docker/Brew Cleanup";
+_docker_brew;
+bar "Git Compression";
+_gits;
+bar "Deep Cache Cleanup";
+_caches;
+bar "Purge complete";

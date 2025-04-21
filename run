@@ -1,0 +1,39 @@
+#! /bin/bash
+
+BASE="/Users/gojira/Documents/Applications/bin";
+OSADIR="$BASE/apple";
+
+col() {
+  case "$1" in
+    red)     echo -e "\033[31m$2\033[0m" ;;
+    green)   echo -e "\033[32m$2\033[0m" ;;
+    yellow)  echo -e "\033[33m$2\033[0m" ;;
+    blue)    echo -e "\033[34m$2\033[0m" ;;
+    *)       echo -e "$2" ;;
+  esac
+}
+
+function osa() {
+  osascript "$OSADIR/$1.applescript";
+}
+
+function count(){
+  counts="$(osascript $OSADIR/count.applescript)";
+
+  counts=(${counts//|/ });
+  names=("Brave" "Safari" "Chrome");
+
+  total=0;
+  for i in "${!counts[@]}"; do
+    b_counts=(${counts[$i]//,/ });
+    for j in "${!b_counts[@]}"; do
+      if [ "${b_counts[$j]}" -gt "1" ]; then
+        echo -e "$(col blue "${names[$i]} $j")\t\t$(col green "${b_counts[$j]}") tabs";
+        total=$((total + b_counts[$j]));
+      fi
+    done
+  done
+  echo -e "\nTotal: $(col yellow "$total") tabs";
+}
+
+"$@"

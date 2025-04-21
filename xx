@@ -1,0 +1,114 @@
+#! /bin/bash
+
+col() {
+  case "$1" in
+    red)     echo -e "\033[31m$2\033[0m" ;;
+    green)   echo -e "\033[32m$2\033[0m" ;;
+    yellow)  echo -e "\033[33m$2\033[0m" ;;
+    blue)    echo -e "\033[34m$2\033[0m" ;;
+    *)       echo -e "$2" ;;
+  esac
+}
+
+function port(){
+  if [ -z "$1" ]; then
+    # list all open ports
+    ports=$(lsof -i tcp -s tcp:listen | grep "IPv4" | awk '{print $9}' | tail -n +3)
+    echo "$ports"
+    # read port
+    read -p "Port to kill: " port
+    # if port is not in list, exit
+    if ! echo "$ports" | grep -q "$port"; then
+      echo "Port $port is not in list."
+      exit 0
+    fi
+  else
+    port=$1
+  fi
+  pid=$(lsof -i tcp:$port | awk '{print $2}' | tail -n1)
+
+  kill -9 $pid
+  echo "Port $1 is killed."
+}
+
+## Auto git commit
+function commit() {
+  if git rev-parse --is-inside-work-tree &> /dev/null; then
+    git add .
+
+    # if no commit message ask
+    if [ $# -eq 0 ]; then
+      echo "Enter a commit message:"
+      read -r msg
+    else
+      msg="$1"
+    fi
+    if [ -z "$msg" ]; then
+      echo "Error: no commit message"
+      return 1
+    fi
+
+    if [[ "$2" == "--days" ]]; then
+        git commit --date "$3 day ago" -m "$msg"
+    else
+        git commit -m "$msg"
+    fi
+    branch="$(git branch --show-current)"
+    git pull origin "$branch"
+
+    if [[ "$2" == "-f" ]]; then
+        git push
+    fi
+  else
+    echo "Error: not a git repository"
+  fi
+}
+
+function gcp(){
+  if [[ "$PWD" == *"Github"* ]]; then
+    echo "$(col green "Cloning into $PWD")"
+  else
+    echo "Are you sure you want to clone into $PWD? (y/n)";
+    read -r ans;
+    if [[ "$ans" == "n" ]]; then
+      exit 1;
+    fi
+  fi
+
+  git clone https://github.com/plutoniumm/$1.git --depth 1;
+}
+
+function todos(){
+  BASE="$(pwd)";
+
+  dirs=$(find . -type d -name ".git" | grep -vE "node_modules" | sed 's/\.git//'| sed 's/.\///');
+  for dir in $dirs; do
+      cd "$BASE/$dir";
+      echo "$(col green "$dir")";
+      grep -r "TODO" . | grep -vE "node_modules|.git|.svelte-kit|build|dist|.ipynb|.json|.wasm";
+  done
+}
+
+function diff(){
+  BASE="$(pwd)";
+
+  dirs=$(find . -type d -name ".git" | grep -vE "node_modules" | sed 's/\.git//'| sed 's/.\///');
+  for dir in $dirs; do
+    cd "$BASE/$dir/"
+    if [[ ! -d ".git" ]]; then
+        cd ..;
+        continue;
+    fi
+
+    diffCt=$(git diff --stat);
+    if [ -n "$diffCt" ]; then
+      ago=$(git log -1 --format=%ar);
+      echo "$(col blue "$dir"): $(col yellow "$ago")";
+      git diff --stat | cat;
+    fi
+
+    cd ..;
+  done
+}
+
+"$@"

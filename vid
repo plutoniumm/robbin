@@ -1,0 +1,134 @@
+#! /bin/bash
+
+col() {
+  case "$1" in
+    red)     echo -e "\033[31m$2\033[0m" ;;
+    green)   echo -e "\033[32m$2\033[0m" ;;
+    yellow)  echo -e "\033[33m$2\033[0m" ;;
+    blue)    echo -e "\033[34m$2\033[0m" ;;
+    *)       echo -e "$2" ;;
+  esac
+}
+
+# 1. Remove '[...]'
+# 2. Remove all non-alphanumeric characters
+# 3. Replace all multiple spaces with '-'
+# 4. Replace all ' . ' with '.'
+# 5. Replace all '!... ' with ' '
+# USAGE: echo $(clean "string")
+# ex: newname=$(clean "$name")
+clean() {
+  name="$1"
+  name2="$( echo "$name" \
+      | sed 's/\[[^]]*\]//g' \
+      | sed 's/[^a-zA-Z0-9.]/ /g' \
+      | sed 's/  */ /g' \
+      | sed 's/ \./\./g' \
+      | sed 's/\. /\./g' \
+      | sed 's/  */-/g' \
+      | sed 's/!.*\ / /g' \
+  )";
+  # dont start with a dot
+  name2="${name2#\.}"
+  echo "$name2"
+}
+
+## Download via ytdlp: opts=(a, nc)
+function dl() {
+  if [ "$2" = "a" ]; then
+    echo $(col yellow "in Audio mode")
+    cmd="yt-dlp \"$1\" -x --audio-format mp3 --audio-quality 0";
+  else
+    cmd="yt-dlp \"$1\"";
+    if [[ "$1" == *"twitch.tv"* ]]; then
+      echo $(col yellow "in Twitch mode")
+      cmd="$cmd -f \"[height<=720]\"";
+    elif [[ "$1" == *"youtube.com"* ]]; then
+      echo $(col yellow "in YouTube mode");
+      cmd="$cmd -f \"[height<=720][ext=mp4]\"";
+    else
+      echo $(col yellow "in Generic mode");
+    fi
+  fi
+
+  name="$(eval "$cmd --get-filename")";
+  eval "$cmd";
+
+  name2=$(clean "$name");
+  mv "$name" "$name2";
+  echo "$name2 Downloaded";
+}
+
+
+function scribe(){
+  isURL=false;
+  name="";
+  rand="$(($(date +%s) % 1000))";
+
+  # check if file is provided
+  if [ -z "$1" ]; then
+    # explain usage
+    echo "Usage: xx sst <args> <file/url>";
+    echo "Args:";
+    echo "  -t: bool (translate to en)";
+    echo "  --subs (keep subtitles)";
+    return
+  fi
+
+  # check if is url
+  if [[ $1 == https* ]]; then
+    isURL=true;
+     # if url download url
+    if [ "$isURL" = true ]; then
+      echo "Downloading Target";
+      yt-dlp -f 'ba' -x --audio-format mp3 $url  -o "c-$rand.%(ext)s";
+      name="c-$rand.mp3";
+    else
+      name="$1";
+    fi
+  else
+    name=$(clean "$1");
+    echo "Old name: $1";
+    echo "Renaming file to $name";
+    mv "$1" $name;
+  fi
+
+  # run
+  # whisper -l <2-digit iso lang> -m <model> -t (true/false, tranlate) <file>
+  # check if args has -t
+  if [[ $@ == *"-t"* ]]; then
+    whisper -l en -m small.en -t true $name
+  else
+    whisper -l en -m small.en $name
+  fi
+
+  rm $name.srt $name.vtt
+}
+
+function compress(){
+  name=$1;
+  rand=$(( ( RANDOM % 1000 )  + 1 ));
+
+  # ask for bitrate
+  if [ -z "$2" ]; then
+    echo $(col yellow "Enter bitrate as <n>k (default 3000k):");
+    read bitrate;
+    if [ -z "$bitrate" ]; then
+      bitrate="3000k";
+    fi
+  else
+    bitrate="$2";
+  fi
+
+  echo $(col blue "Compressing $name");
+  name2=$(clean "$name");
+
+  ffmpeg -hide_banner -i "$name" -c:v h264_videotoolbox -b:v $bitrate -max_muxing_queue_size 1024 -threads:v 0 -y out_$rand.mp4;
+  echo $(col yellow "Generated out_$rand.mp4");
+
+  rm -rf "$name";
+  mv out_$rand.mp4 "$name2";
+  echo $(col yellow "Compressed to $name2")
+}
+
+"$@"
