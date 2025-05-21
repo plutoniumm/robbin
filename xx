@@ -65,16 +65,6 @@ function commit() {
 }
 
 function gcp(){
-  if [[ "$PWD" == *"Github"* ]]; then
-    echo "$(col green "Cloning into $PWD")"
-  else
-    echo "Are you sure you want to clone into $PWD? (y/n)";
-    read -r ans;
-    if [[ "$ans" == "n" ]]; then
-      exit 1;
-    fi
-  fi
-
   git clone https://github.com/plutoniumm/$1.git --depth 1;
 }
 
