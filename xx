@@ -68,17 +68,6 @@ function gcp(){
   git clone https://github.com/plutoniumm/$1.git --depth 1;
 }
 
-function todos(){
-  BASE="$(pwd)";
-
-  dirs=$(find . -type d -name ".git" | grep -vE "node_modules" | sed 's/\.git//'| sed 's/.\///');
-  for dir in $dirs; do
-      cd "$BASE/$dir";
-      echo "$(col green "$dir")";
-      grep -r "TODO" . | grep -vE "node_modules|.git|.svelte-kit|build|dist|.ipynb|.json|.wasm";
-  done
-}
-
 function diff(){
   BASE="$(pwd)";
 
