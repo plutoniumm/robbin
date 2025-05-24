@@ -3,23 +3,25 @@
 function on(){
 	defaults write com.apple.dock tilesize -float 32;
 	defaults delete com.apple.dock autohide-delay;
+	defaults write com.apple.dock no-bouncing -bool FALSE;
 	killall Dock;
 }
 
 function off(){
 	defaults write com.apple.dock tilesize -float 1;
 	defaults write com.apple.dock autohide-delay -float 1000;
+	defaults write com.apple.dock no-bouncing -bool TRUE;
 	killall Dock;
 }
 
 function toggle(){
 	val=$(defaults read com.apple.dock tilesize);
 	if [ $val -eq 32 ]; then
-		echo "Turning off";
 		off;
+		echo "Dock off";
 	else
-		echo "Turning on";
 		on;
+		echo "Dock on";
 	fi
 }
 

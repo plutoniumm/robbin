@@ -1,0 +1,47 @@
+# FACEBOOK
+facebook.com
+fbcdn.com
+doubleclick.net
+messenger.com
+tfbnw.com
+internet.org
+freebasics.com
+instagram.com
+threads.com
+fb.me
+meta.com
+
+# LINKEDIN
+ads.linkedin.com
+brand.linkedin.com
+community.linkedin.com
+developer.linkedin.com
+developers.linkedin.com
+
+# GOOGLE tracking
+googletagmanager.com
+google-analytics.com
+googleadservices.com
+googletagservices.community
+
+# CHINA
+bytecdn.cn
+bytecdn.com
+ads.tiktok.com
+tiktok.com
+baidu.com
+
+# ADOBE
+adobe.com
+adobedtm.com
+
+# SITES
+netflix.com
+amazon-adsystem.com
+buysellads.com
+servedby-buysellads.com
+moatads.com
+carbonads.com
+ethicalads.io
+wpadmngr.com
+dotmetrics.net
