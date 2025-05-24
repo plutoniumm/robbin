@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 BASE="/usr/local/Caskroom/miniconda/base"
 CD="$BASE/bin/conda"
 
@@ -15,22 +15,24 @@ col() {
 eval "$($CD shell.zsh hook)"
 
 _py_add() {
+    echo "Via $1, $2"
     if [[ -z "$1" ]] || [[ -z "$2" ]]; then
         echo "Usage: py <env_name> <python_version>";
         return 1;
     fi
 
-    py_version=$2;
+    py_ver=$2;
     env_name=$1;
 
-    if ! [[ "$py_version" =~ ^3\.[0-9]{1,2}$ ]]; then
+    if ! [[ "$py_ver" =~ ^3\.[0-9]{1,2}$ ]]; then
         echo "Invalid version. Use format 3.x";
         return 1;
     fi
 
     arc=$(arch);
-    col blue "New env '$env_name' on $arc Python $py_version";
-    conda create --name "$env_name" python=$py_version -y;
+    col blue "New env '$env_name' on $arc Python $py_ver";
+
+    CONDA_SUBDIR=osx-arm64 conda create --name "$env_name" python=$py_ver -y;
 
     if [[ $? -eq 0 ]]; then
         col green "Environment '$env_name' created successfully."
@@ -69,8 +71,8 @@ py_auto() {
 
     env_name="$1";
     if ! py_list | awk '{print $1}' | grep -q "^$env_name$"; then
-        read -p "Enter version (3.x): " py_version
-        _py_add "$env_name" "$py_version"
+        read -p "Enter version (3.x): " py_ver;
+        _py_add "$env_name" "$py_ver";
     fi
     _py_activate "$env_name";
     col blue "Using: $(which python3)";
