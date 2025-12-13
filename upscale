@@ -1,0 +1,23 @@
+#! /usr/local/Caskroom/miniconda/base/envs/amos/bin/python
+from super_image import EdsrModel, ImageLoader as IL
+import argparse, os
+from PIL import Image
+
+parser = argparse.ArgumentParser()
+parser.add_argument("input", help="Path to input image")
+parser.add_argument("--scale", type=int, required=True, help="Upscale factor (e.g. 2, 4)")
+parser.add_argument("--output", default=".", help="Output directory")
+args = parser.parse_args()
+
+model = EdsrModel.from_pretrained("eugenesiow/edsr-base", scale=args.scale)
+
+# Load and upscale
+img = IL.load_image(Image.open(args.input))
+upscaled = model(img)
+
+# Save with _upscaled suffix
+name, ext = os.path.splitext(os.path.basename(args.input))
+out_path = os.path.join(args.output, f"{name}_upscaled{ext}")
+IL.save_image(upscaled, out_path)
+
+print(f"Saved: {out_path}")

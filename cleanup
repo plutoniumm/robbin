@@ -1,5 +1,5 @@
 #!/bin/bash
-col() {
+col(){
   case "$1" in
     red)     echo -e "\033[31m$2\033[0m" ;;
     green)   echo -e "\033[32m$2\033[0m" ;;
@@ -9,7 +9,7 @@ col() {
   esac
 }
 
-function _ask(){
+_ask(){
   category="$1";
   question="$2";
 
@@ -30,7 +30,7 @@ function _ask(){
   esac
 }
 
-function _langs() {
+_langs(){
   _ask 0 "Delete lang tools? (rustup, go, ruby, swift)" || return;
 
   rustup toolchain uninstall nightly;
@@ -44,7 +44,7 @@ function _langs() {
   sudo rm -rf ~/Documents/Github.nosync/**/__pycache__;
 }
 
-function _docker_brew() {
+_docker_brew(){
   _ask 1 "Docker/Brew cleanup?" || return;
 
   if ! docker info &> /dev/null; then
@@ -58,7 +58,7 @@ function _docker_brew() {
   brew cleanup --prune=0;
 }
 
-function _gits() {
+_gits(){
   _ask 0 "Git Compression?" || return;
 
   BASE=~/Documents/Github.nosync;
@@ -74,7 +74,7 @@ function _gits() {
   done
 }
 
-function _caches() {
+_caches(){
   _ask 2 "Deeper caches? (.npm, go/pkg, Library/Caches, pycache)" || return;
 
   sudo rm -rf ~/.npm/_npx;
@@ -86,7 +86,7 @@ function _caches() {
   sudo rm -rf ~/.cache/pip;
 }
 
-function bar() {
+bar(){
   echo "===================="
   echo "$1"
   echo "===================="
@@ -101,3 +101,5 @@ _gits;
 bar "Deep Cache Cleanup";
 _caches;
 bar "Purge complete";
+
+## Run code cleanup

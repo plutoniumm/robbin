@@ -2,7 +2,7 @@
 BASE="/usr/local/Caskroom/miniconda/base"
 CD="$BASE/bin/conda"
 
-col() {
+col(){
   case "$1" in
     red)     echo -e "\033[31m$2\033[0m" ;;
     green)   echo -e "\033[32m$2\033[0m" ;;
@@ -14,10 +14,10 @@ col() {
 
 eval "$($CD shell.zsh hook)"
 
-_py_add() {
+_py_add(){
     echo "Via $1, $2"
-    if [[ -z "$1" ]] || [[ -z "$2" ]]; then
-        echo "Usage: py <env_name> <python_version>";
+    if [[ -z "$1" ]]; then
+        echo "Usage: py <env_name>";
         return 1;
     fi
 
@@ -32,7 +32,7 @@ _py_add() {
     arc=$(arch);
     col blue "New env '$env_name' on $arc Python $py_ver";
 
-    CONDA_SUBDIR=osx-arm64 conda create --name "$env_name" python=$py_ver -y;
+    CONDA_SUBDIR=osx-arm64 conda create --name "$env_name" python=$py_ver -y --use-index-cache --quiet;
 
     if [[ $? -eq 0 ]]; then
         col green "Environment '$env_name' created successfully."
@@ -51,7 +51,7 @@ _py_add() {
     fi
 }
 
-_py_activate() {
+_py_activate(){
     if [[ -z "$1" ]]; then
         echo "Usage: py activate <env_name>";
         conda env list;
@@ -63,7 +63,7 @@ _py_activate() {
     \eval "$ask_conda"
 }
 
-py_auto() {
+py_auto(){
     if [[ -z "$1" ]]; then
         echo "Usage: py <env_name>";
         return 1;
@@ -78,7 +78,7 @@ py_auto() {
     col blue "Using: $(which python3)";
 }
 
-py_remove() {
+py_remove(){
     if [[ -z "$1" ]]; then
         echo "Usage: py remove <env_name>";
         py_list;
@@ -89,7 +89,7 @@ py_remove() {
     conda remove --name "$1" --all -y;
 }
 
-py_list() {
+py_list(){
     ls "$BASE/envs/";
 }
 
@@ -98,3 +98,6 @@ case "$1" in
     list) py_list ;;
     *) py_auto "$1" ;;
 esac
+
+
+## PyConda wrapper: py <magic>

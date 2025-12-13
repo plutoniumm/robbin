@@ -1,3 +1,4 @@
 .DS_Store
 beep
 local/
+scripts/battery.c*

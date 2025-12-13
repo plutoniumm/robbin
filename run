@@ -3,7 +3,7 @@
 BASE="/Users/gojira/Documents/Applications/bin";
 OSADIR="$BASE/apple";
 
-col() {
+col(){
   case "$1" in
     red)     echo -e "\033[31m$2\033[0m" ;;
     green)   echo -e "\033[32m$2\033[0m" ;;
@@ -13,10 +13,12 @@ col() {
   esac
 }
 
-function osa() {
+# Execute AppleScript
+function osa(){
   osascript "$OSADIR/$1.applescript";
 }
 
+# Count open tabs
 function count(){
   counts="$(osascript $OSADIR/count.applescript)";
 
@@ -36,20 +38,21 @@ function count(){
   echo -e "\nTotal: $(col yellow "$total") tabs";
 }
 
+# Start wifi monitor
 function wimon(){
-  isWorking=0
-  ping -c 1 -W 100 google.com > /dev/null 2>&1 && isWorking=1 || isWorking=0
+  isWorking=0;
+  ping -c 1 -W 100 google.com > /dev/null 2>&1 && isWorking=1 || isWorking=0;
   if [ $isWorking -eq 1 ]; then
-    echo "ok."
-    exit 0
+    echo "ok.";
+    exit 0;
   fi
 
-  echo "   Restarting..."
+  echo "   Restarting...";
 
-  DEV="en0"
-  networksetup -setairportpower "$DEV" off
-  sleep 0.5
-  networksetup -setairportpower "$DEV" on
+  DEV="en0";
+  networksetup -setairportpower "$DEV" off;
+  sleep 0.5;
+  networksetup -setairportpower "$DEV" on;
 }
 
 "$@"
