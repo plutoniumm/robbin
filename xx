@@ -1,5 +1,8 @@
 #! /bin/bash
 
+BASE="/Users/gojira/Documents/Applications/bin";
+OSADIR="$BASE/apple";
+
 col(){
   case "$1" in
     red)     echo -e "\033[31m$2\033[0m" ;;
@@ -68,26 +71,30 @@ function gcp(){
   git clone https://github.com/plutoniumm/$1.git --depth 1;
 }
 
-function diff(){
-  BASE="$(pwd)";
-
-  dirs=$(find . -type d -name ".git" | grep -vE "node_modules" | sed 's/\.git//'| sed 's/.\///');
-  for dir in $dirs; do
-    cd "$BASE/$dir/"
-    if [[ ! -d ".git" ]]; then
-        cd ..;
-        continue;
-    fi
-
-    diffCt=$(git diff --stat);
-    if [ -n "$diffCt" ]; then
-      ago=$(git log -1 --format=%ar);
-      echo "$(col blue "$dir"): $(col yellow "$ago")";
-      git diff --stat | cat;
-    fi
-
-    cd ..;
-  done
+# Execute AppleScript
+function osa(){
+  osascript "$OSADIR/$1.applescript";
 }
+
+# Count open tabs
+function count(){
+  counts="$(osascript $OSADIR/count.applescript)";
+
+  counts=(${counts//|/ });
+  names=("Brave" "Safari" "Chrome");
+
+  total=0;
+  for i in "${!counts[@]}"; do
+    b_counts=(${counts[$i]//,/ });
+    for j in "${!b_counts[@]}"; do
+      if [ "${b_counts[$j]}" -gt "1" ]; then
+        echo -e "$(col blue "${names[$i]} $j")\t\t$(col green "${b_counts[$j]}") tabs";
+        total=$((total + b_counts[$j]));
+      fi
+    done
+  done
+  echo -e "\nTotal: $(col yellow "$total") tabs";
+}
+
 
 "$@"
