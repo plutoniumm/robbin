@@ -77,13 +77,20 @@ _gits(){
 _caches(){
   _ask 2 "Deeper caches? (.npm, go/pkg, Library/Caches, pycache)" || return;
 
-  sudo rm -rf ~/.npm/_npx;
-  sudo rm -rf ~/Library/Caches/org.swift.swiftpm/repositories;
-  sudo rm -rf ~/Library/Developer/Xcode/*DeviceSupport;
-  sudo rm -rf /Library/Developer/Xcode/DerivedData/*;
-  sudo rm -rf ~/go/pkg;
-  sudo rm -rf ~/Library/Caches/pip;
-  sudo rm -rf ~/.cache/pip;
+  # package managers
+  rm -rf ~/.npm/_npx;
+  rm -rf ~/Library/Caches/org.swift.swiftpm/repositories;
+  rm -rf ~/go/pkg;
+  rm -rf ~/Library/Caches/pip;
+  rm -rf ~/.cache/pip;
+  rm -rf ~/.nvm/.cache;
+
+  # builder caches
+  rm -rf $HOME/.gradle/caches/;
+  rm -rf /Library/Developer/Xcode/DerivedData/*;
+
+  # other caches
+  rm -rf ~/Library/Developer/Xcode/*DeviceSupport;
 }
 
 bar(){
@@ -99,7 +106,7 @@ _docker_brew;
 bar "Git Compression";
 _gits;
 bar "Deep Cache Cleanup";
-_caches;
+sudo _caches;
 bar "Purge complete";
 
 ## Run code cleanup

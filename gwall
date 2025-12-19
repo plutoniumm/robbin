@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ============================================================
+# Ghostty wallpaper picker (local-only, macOS, Bash 3.2)
+# - Random image from fixed local directory
+# - Writes ~/.config/ghostty/wallpaper.conf
+# - Reloads Ghostty if running
+# ============================================================
+
+# --------- Hard-coded wallpaper directory
+WALL_DIR="/Users/gojira/Documents/GitHub.nosync/culture"
+
+# --------- Paths
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+GHOSTTY_DIR="$CONF_DIR/ghostty"
+WALL_CONF="$GHOSTTY_DIR/wallpaper.conf"
+MAIN_CONF="$GHOSTTY_DIR/config"
+
+mkdir -p "$GHOSTTY_DIR"
+
+log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+
+# --------- Pick random local image
+pick_random_image() {
+  IMAGES=()
+  while IFS= read -r f; do
+    IMAGES+=("$f")
+  done < <(
+    find "$WALL_DIR" -type f \
+      \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.webp' \)
+  )
+
+  if [ "${#IMAGES[@]}" -eq 0 ]; then
+    log "No images found in $WALL_DIR"
+    exit 1
+  fi
+
+  local idx=$((RANDOM % ${#IMAGES[@]}))
+  CURRENT_IMAGE="${IMAGES[$idx]}"
+}
+
+# --------- Write wallpaper config and ensure include
+write_wall_conf_and_include() {
+  cat >"$WALL_CONF" <<EOF
+background-image=$CURRENT_IMAGE
+background-image-fit=cover
+background-image-position=center
+background-image-opacity=0.1
+EOF
+
+  [ -f "$MAIN_CONF" ] || touch "$MAIN_CONF"
+  if ! grep -qsF "config-file = $WALL_CONF" "$MAIN_CONF"; then
+    printf '\nconfig-file = %s\n' "$WALL_CONF" >>"$MAIN_CONF"
+    log "Added include to Ghostty main config."
+  fi
+}
+
+# --------- Reload Ghostty if running (macOS)
+reload_ghostty_if_running() {
+  case "$(uname)" in
+    Darwin)
+      if /usr/bin/osascript -e '
+        tell application "System Events"
+          set pn to name of processes
+          return (pn contains "Ghostty") or (pn contains "Ghostty Nightly")
+        end tell' | grep -qi true; then
+        /usr/bin/osascript <<'OSA' 2>/dev/null || true
+tell application "Ghostty" to activate
+tell application "System Events" to keystroke "," using {command down, shift down}
+OSA
+      else
+        log "Ghostty not running."
+      fi
+      ;;
+  esac
+}
+
+# --------- Run
+pick_random_image
+write_wall_conf_and_include
+reload_ghostty_if_running
+
