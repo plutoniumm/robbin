@@ -13,6 +13,11 @@ col(){
   esac
 }
 
+function token(){
+  . "$BASE/local/tokens.env"
+  echo "${!1}"
+}
+
 function port(){
   if [ -z "$1" ]; then
     # list all open ports
@@ -34,36 +39,41 @@ function port(){
   echo "Port $1 is killed."
 }
 
-## Auto git commit
-function commit(){
-  if git rev-parse --is-inside-work-tree &> /dev/null; then
-    git add .
-
-    # if no commit message ask
-    if [ $# -eq 0 ]; then
-      echo "Enter a commit message:"
-      read -r msg
-    else
-      msg="$1"
-    fi
-    if [ -z "$msg" ]; then
-      echo "Error: no commit message"
-      return 1
-    fi
-
-    if [[ "$2" == "--days" ]]; then
-        git commit --date "$3 day ago" -m "$msg"
-    else
-        git commit -m "$msg"
-    fi
-    branch="$(git branch --show-current)"
-    git pull origin "$branch"
-
-    if [[ "$2" == "-f" ]]; then
-        git push
-    fi
-  else
+function commit() {
+  git rev-parse --is-inside-work-tree &>/dev/null || {
     echo "Error: not a git repository"
+    return 1
+  }
+
+  git add .
+
+  if [ $# -eq 0 ]; then
+    echo "Enter a commit message:"
+    read -r msg
+  else
+    msg="$1"
+  fi
+
+  [ -z "$msg" ] && { echo "Error: no commit message"; return 1; }
+
+  if [[ "$2" == "--days" ]]; then
+    git commit --date "$3 day ago" -m "$msg"
+  else
+    git commit -m "$msg"
+  fi
+
+  branch="$(git branch --show-current)"
+
+  if git rev-parse --abbrev-ref --symbolic-full-name @{u} &>/dev/null; then
+    git pull
+  fi
+
+  if [[ "$2" == "-f" ]]; then
+    if git rev-parse --abbrev-ref --symbolic-full-name @{u} &>/dev/null; then
+      git push
+    else
+      git push --set-upstream origin main
+    fi
   fi
 }
 
@@ -71,12 +81,10 @@ function gcp(){
   git clone https://github.com/plutoniumm/$1.git --depth 1;
 }
 
-# Execute AppleScript
 function osa(){
   osascript "$OSADIR/$1.applescript";
 }
 
-# Count open tabs
 function count(){
   counts="$(osascript $OSADIR/count.applescript)";
 

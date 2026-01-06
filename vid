@@ -59,53 +59,6 @@ function dl(){
   echo "$name2 Downloaded";
 }
 
-
-# Transcribe AV w/ Whisper
-function scribe(){
-  isURL=false;
-  name="";
-  rand="$(($(date +%s) % 1000))";
-
-  # check if file is provided
-  if [ -z "$1" ]; then
-    # explain usage
-    echo "Usage: xx sst <args> <file/url>";
-    echo "Args:";
-    echo "  -t: bool (translate to en)";
-    echo "  --subs (keep subtitles)";
-    return
-  fi
-
-  # check if is url
-  if [[ $1 == https* ]]; then
-    isURL=true;
-     # if url download url
-    if [ "$isURL" = true ]; then
-      echo "Downloading Target";
-      yt-dlp -f 'ba' -x --audio-format mp3 $url  -o "c-$rand.%(ext)s";
-      name="c-$rand.mp3";
-    else
-      name="$1";
-    fi
-  else
-    name=$(clean "$1");
-    echo "Old name: $1";
-    echo "Renaming file to $name";
-    mv "$1" $name;
-  fi
-
-  # run
-  # whisper -l <2-digit iso lang> -m <model> -t (true/false, tranlate) <file>
-  # check if args has -t
-  if [[ $@ == *"-t"* ]]; then
-    whisper -l en -m small.en -t true $name
-  else
-    whisper -l en -m small.en $name
-  fi
-
-  rm $name.srt $name.vtt
-}
-
 # Compress Video
 function compress(){
   name=$1;

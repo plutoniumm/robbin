@@ -1,5 +1,11 @@
 alias x86do="arch -x86_64"
 alias armdo="arch -arm64"
+alias cat="bat"
+alias ls="eza --icons"
+alias ll="eza -la --icons"
+alias wget="aria2c"
+alias github="cd ~/Documents/GitHub.nosync/ && ls"
+alias iitm="cd ~/Documents/GitHub.nosync/IITM && ls"
 
 ZSH_DISABLE_COMPFIX=true
 ZSH_THEME="robbyrussell"
@@ -22,8 +28,6 @@ bindkey '^[[B' history-substring-search-down # or '\eOB'
 HISTORY_SUBSTRING_SEARCH_ENSURE_UNIQUE=1
 
 export PATH="$PATH:/opt/homebrew/lib/node_modules/:/Users/gojira/go/bin:/opt/homebrew/sbin:/Users/gojira/.cargo/bin:/Users/gojira/.bun/bin:/opt/homebrew/bin:/Users/gojira/dots/bin:/Users/gojira/.local/bin:/Users/gojira/.wasmer/bin:/opt/homebrew/Cellar/nginx/1.25.5/bin:/Users/gojira/Documents/Applications/bin:/Users/gojira/.lmstudio/bin"
-
-gwall;
 
 _conda_lazy_load() {
     unset -f conda activate
