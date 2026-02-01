@@ -1,0 +1,96 @@
+#! /Users/gojira/.bun/bin/bun
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { join } from "path";
+
+const VSCODE_DIR = ".vscode";
+const SETTINGS_FILE = join(VSCODE_DIR, "settings.json");
+const TODOS_FILE = join(VSCODE_DIR, "todos.json");
+
+function ensureInit () {
+  if (!existsSync(VSCODE_DIR)) mkdirSync(VSCODE_DIR, { recursive: true });
+  if (!existsSync(SETTINGS_FILE)) writeFileSync(SETTINGS_FILE, "{}\n", "utf8");
+  if (!existsSync(TODOS_FILE)) writeFileSync(TODOS_FILE, "[]\n", "utf8");
+}
+
+function nowIsoUtc (): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+interface TodoItem {
+  date: string;
+  message: string;
+}
+
+function readTodos (): TodoItem[] {
+  try {
+    const raw = readFileSync(TODOS_FILE, "utf8").trim();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter(isTodo) : [];
+  } catch {
+    return [];
+  }
+}
+
+function isTodo (x: any): x is TodoItem {
+  return x && typeof x === "object" && typeof x.date === "string" && typeof x.message === "string";
+}
+
+function writeTodos (items: TodoItem[]) {
+  writeFileSync(TODOS_FILE, JSON.stringify(items, null, 2) + "\n", "utf8");
+}
+
+function appendTodo (msg: string) {
+  const items = readTodos();
+  items.push({ date: nowIsoUtc(), message: msg });
+  writeTodos(items);
+}
+
+const COLORS = {
+  BLUE: "\u001b[34m",
+  WHITE: "\u001b[37m",
+  RESET: "\u001b[0m",
+};
+
+function listTodos () {
+  const items = readTodos();
+  if (items.length === 0) return;
+
+  const byDay = new Map<string, string[]>();
+  for (const it of items) {
+    const day = it.date.split("T")[0];
+    const arr = byDay.get(day) ?? [];
+    arr.push(it.message);
+    byDay.set(day, arr);
+  }
+
+  const days = Array.from(byDay.keys()).sort();
+  for (const day of days) {
+    process.stdout.write(`${COLORS.BLUE}${day}${COLORS.RESET}\n`);
+    const msgs = byDay.get(day)!;
+    process.stdout.write(`${COLORS.WHITE}${msgs.map(m => `- ${unescapeForDisplay(m)}`).join("\n")}${COLORS.RESET}\n`);
+  }
+}
+
+function escapeForJson (s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+
+function unescapeForDisplay (s: string): string {
+  // Stored as plain JSON strings; display as-is
+  return s;
+}
+
+function main () {
+  ensureInit();
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+    listTodos();
+    return;
+  }
+  const message = escapeForJson(args.join(" "));
+  appendTodo(message);
+  console.log(`✅  Added todo: ${message}`);
+}
+
+main();

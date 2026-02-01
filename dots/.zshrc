@@ -1,26 +1,30 @@
-alias x86do="arch -x86_64"
-alias armdo="arch -arm64"
-alias cat="bat"
-alias ls="eza --icons"
-alias ll="eza -la --icons"
-alias wget="aria2c"
-alias github="cd ~/Documents/GitHub.nosync/ && ls"
-alias iitm="cd ~/Documents/GitHub.nosync/IITM && ls"
+alias x86do="arch -x86_64";
+alias armdo="arch -arm64";
+alias cat="bat";
+alias ls="eza --icons";
+alias ll="eza -la --icons";
+alias wget="aria2c";
+alias make="just";
 
-ZSH_DISABLE_COMPFIX=true
-ZSH_THEME="robbyrussell"
-UBIN="/Users/gojira/Documents/Applications/bin"
+alias github="cd ~/Documents/GitHub.nosync/ && ls";
+alias iitm="cd ~/Documents/GitHub.nosync/IITM && ls";
+alias dcpp="cd ~/Downloads/DC++ && ls";
+alias amos="cd ~/Documents/GitHub.nosync/amos && ls";
+
+ZSH_DISABLE_COMPFIX=true;
+ZSH_THEME="robbyrussell";
+UBIN="/Users/gojira/Documents/Applications/bin";
 
 plugins=(git)
 
 export ZSH="$HOME/.oh-my-zsh";
 source $UBIN/dots/antigen.zsh;
-source $ZSH/oh-my-zsh.sh
+source $ZSH/oh-my-zsh.sh;
 
-antigen bundle zsh-users/zsh-autosuggestions
-antigen bundle zsh-users/zsh-history-substring-search
-antigen bundle zsh-users/zsh-syntax-highlighting
-antigen apply
+antigen bundle zsh-users/zsh-autosuggestions;
+antigen bundle zsh-users/zsh-history-substring-search;
+antigen bundle zsh-users/zsh-syntax-highlighting;
+antigen apply;
 
 # zsh-history-substring-search configuration
 bindkey '^[[A' history-substring-search-up # or '\eOA'
@@ -30,8 +34,9 @@ HISTORY_SUBSTRING_SEARCH_ENSURE_UNIQUE=1
 export PATH="$PATH:/opt/homebrew/lib/node_modules/:/Users/gojira/go/bin:/opt/homebrew/sbin:/Users/gojira/.cargo/bin:/Users/gojira/.bun/bin:/opt/homebrew/bin:/Users/gojira/dots/bin:/Users/gojira/.local/bin:/Users/gojira/.wasmer/bin:/opt/homebrew/Cellar/nginx/1.25.5/bin:/Users/gojira/Documents/Applications/bin:/Users/gojira/.lmstudio/bin"
 
 _conda_lazy_load() {
-    unset -f conda activate
+    unset -f conda activate;
     __conda_setup="$('/usr/local/Caskroom/miniconda/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+
     if [ $? -eq 0 ]; then
         eval "$__conda_setup"
     else
@@ -61,11 +66,6 @@ py() {
     _lazy_load py "$@"
 }
 
-fort() {
-    _lazy_load fort "$@"
-}
-
-
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
@@ -83,13 +83,13 @@ esac
 [[ ! -r '/Users/gojira/.opam/opam-init/init.zsh' ]] || source '/Users/gojira/.opam/opam-init/init.zsh' > /dev/null 2> /dev/null
 # END opam
 
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export PATH=$PATH:$ANDROID_HOME/emulator
-export PATH=$PATH:$ANDROID_HOME/platform-tools
-export PATH="$PATH:/opt/homebrew/bin/"
+export ANDROID_HOME="$HOME/Library/Android/sdk";
+export PATH="$PATH:$ANDROID_HOME/emulator";
+export PATH="$PATH:$ANDROID_HOME/platform-tools";
+export PATH="$PATH:/opt/homebrew/bin/";
 
 # bun completions
 [ -s "/Users/gojira/.bun/_bun" ] && source "/Users/gojira/.bun/_bun"
-export PATH="/usr/local/opt/ruby/bin:$PATH"
-export PATH="/usr/local/lib/ruby/gems/3.4.0/bin:$PATH"
-export PATH="/usr/local/sbin:$PATH"
+export PATH="/usr/local/opt/ruby/bin:$PATH";
+export PATH="/usr/local/lib/ruby/gems/3.4.0/bin:$PATH";
+export PATH="/usr/local/sbin:$PATH";
