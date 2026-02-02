@@ -8,9 +8,12 @@ const SETTINGS_FILE = join(VSCODE_DIR, "settings.json");
 const TODOS_FILE = join(VSCODE_DIR, "todos.json");
 
 function ensureInit () {
-  if (!existsSync(VSCODE_DIR)) mkdirSync(VSCODE_DIR, { recursive: true });
-  if (!existsSync(SETTINGS_FILE)) writeFileSync(SETTINGS_FILE, "{}\n", "utf8");
-  if (!existsSync(TODOS_FILE)) writeFileSync(TODOS_FILE, "[]\n", "utf8");
+  if (!existsSync(VSCODE_DIR))
+    mkdirSync(VSCODE_DIR, { recursive: true });
+  if (!existsSync(SETTINGS_FILE))
+    writeFileSync(SETTINGS_FILE, "{}\n", "utf8");
+  if (!existsSync(TODOS_FILE))
+    writeFileSync(TODOS_FILE, "[]\n", "utf8");
 }
 
 function nowIsoUtc (): string {
@@ -68,17 +71,12 @@ function listTodos () {
   for (const day of days) {
     process.stdout.write(`${COLORS.BLUE}${day}${COLORS.RESET}\n`);
     const msgs = byDay.get(day)!;
-    process.stdout.write(`${COLORS.WHITE}${msgs.map(m => `- ${unescapeForDisplay(m)}`).join("\n")}${COLORS.RESET}\n`);
+    process.stdout.write(`${COLORS.WHITE}${msgs.map(m => `- ${m}`).join("\n")}${COLORS.RESET}\n`);
   }
 }
 
 function escapeForJson (s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-}
-
-function unescapeForDisplay (s: string): string {
-  // Stored as plain JSON strings; display as-is
-  return s;
 }
 
 function main () {
@@ -87,7 +85,8 @@ function main () {
   if (args.length === 0) {
     listTodos();
     return;
-  }
+  };
+
   const message = escapeForJson(args.join(" "));
   appendTodo(message);
   console.log(`✅  Added todo: ${message}`);

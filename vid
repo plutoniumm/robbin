@@ -10,29 +10,6 @@ col(){
   esac
 }
 
-# 1. Remove '[...]'
-# 2. Remove all non-alphanumeric characters
-# 3. Replace all multiple spaces with '-'
-# 4. Replace all ' . ' with '.'
-# 5. Replace all '!... ' with ' '
-# USAGE: echo $(clean "string")
-# ex: newname=$(clean "$name")
-clean(){
-  name="$1"
-  name2="$( echo "$name" \
-      | sed 's/\[[^]]*\]//g' \
-      | sed 's/[^a-zA-Z0-9.]/ /g' \
-      | sed 's/  */ /g' \
-      | sed 's/ \./\./g' \
-      | sed 's/\. /\./g' \
-      | sed 's/  */-/g' \
-      | sed 's/!.*\ / /g' \
-  )";
-  # dont start with a dot
-  name2="${name2#\.}"
-  echo "$name2"
-}
-
 # Download via ytdlp: opts=(a, nc)
 function dl(){
   if [ "$2" = "a" ]; then
@@ -61,7 +38,7 @@ function dl(){
 
 # Compress Video
 function compress(){
-  name=$1;
+  name="$1";
   rand=$(( ( RANDOM % 1000 )  + 1 ));
 
   # ask for bitrate

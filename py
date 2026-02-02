@@ -98,6 +98,3 @@ case "$1" in
     list) py_list ;;
     *) py_auto "$1" ;;
 esac
-
-
-## PyConda wrapper: py <magic>

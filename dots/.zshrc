@@ -4,7 +4,6 @@ alias cat="bat";
 alias ls="eza --icons";
 alias ll="eza -la --icons";
 alias wget="aria2c";
-alias make="just";
 
 alias github="cd ~/Documents/GitHub.nosync/ && ls";
 alias iitm="cd ~/Documents/GitHub.nosync/IITM && ls";
