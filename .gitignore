@@ -2,3 +2,5 @@
 beep
 local/
 scripts/battery.c*
+dots/tokens
+sol

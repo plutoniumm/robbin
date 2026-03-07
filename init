@@ -1,0 +1,57 @@
+#!/bin/bash
+
+if [[ -z "$1" || -z "$2" ]]; then
+    echo "Usage: init <lang> <dir>"
+    echo "Supported languages: js, ts, py, go, rs, c"
+    exit 1
+fi
+
+LANG_TYPE="$1"
+TARGET_DIR="$2"
+
+if [[ "$TARGET_DIR" != "." ]]; then
+    mkdir -p "$TARGET_DIR"
+    cd "$TARGET_DIR" || exit 1
+fi
+
+DIR_NAME=$(basename "$PWD")
+
+case "$LANG_TYPE" in
+    js|ts)
+        npm create vite@latest .
+        ;;
+    py)
+        touch index.py readme.md .DS_Store .gitignore
+        git init
+        ;;
+    go)
+        go mod init "$DIR_NAME"
+        cat << 'EOF' > main.go
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}
+EOF
+        ;;
+    rs)
+        cargo init
+        ;;
+    c)
+        touch readme.md .DS_Store .gitignore
+        cat << 'EOF' > main.c
+#include <stdio.h>
+
+int main() {
+    printf("Hello, World!\n");
+    return 0;
+}
+EOF
+        ;;
+    *)
+        echo "Unsupported language: $LANG_TYPE"
+        exit 1
+        ;;
+esac

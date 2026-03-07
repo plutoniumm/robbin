@@ -1,6 +1,6 @@
 #! /bin/bash
 BASE="/usr/local/Caskroom/miniconda/base"
-CD="$BASE/bin/conda"
+CD="/opt/homebrew/bin/conda"
 
 col(){
   case "$1" in
@@ -12,17 +12,15 @@ col(){
   esac
 }
 
-eval "$($CD shell.zsh hook)"
-
 _py_add(){
-    echo "Via $1, $2"
-    if [[ -z "$1" ]]; then
-        echo "Usage: py <env_name>";
+    if [[ -z "$1" || -z "$2" ]]; then
+        echo "Usage: py add <env_name> <3.x>";
+        echo "   or: py <env_name> <3.x>";
         return 1;
     fi
 
-    py_ver=$2;
-    env_name=$1;
+    py_ver="$2";
+    env_name="$1";
 
     if ! [[ "$py_ver" =~ ^3\.[0-9]{1,2}$ ]]; then
         echo "Invalid version. Use format 3.x";
@@ -30,52 +28,27 @@ _py_add(){
     fi
 
     arc=$(arch);
-    col blue "New env '$env_name' on $arc Python $py_ver";
+    col blue "Command for new env '$env_name' on $arc Python $py_ver:";
 
-    CONDA_SUBDIR=osx-arm64 conda create --name "$env_name" python=$py_ver -y --use-index-cache --quiet;
+    cmd="CONDA_SUBDIR=osx-arm64 conda create --name \"$env_name\" python=$py_ver -y --use-index-cache --quiet";
+    echo "$cmd" | pbcopy;
+    echo "Copied to clipboard: $cmd";
+}
 
-    if [[ $? -eq 0 ]]; then
-        col green "Environment '$env_name' created successfully."
-        conda activate "$env_name";
-        pip install uv;
-        uv pip install numpy matplotlib;
+_py_install(){
+    shift;
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: py i <pkg1> <pkg2> ...";
+        return 1;
+    fi
 
-        if [[ -f "requirements.txt" ]]; then
-            read -p "Install requirements.txt? [y/n]: " ireq;
-            last_commit=$(git log -1 --format=%cd --date=format:%Y-%m-%d | head -n 1);
-
-            [[ "$ireq" == "y" ]] && uv pip install -r requirements.txt --exclude-newer $last_commit;
-        fi
+    if command -v uv &>/dev/null; then
+        col green "Using uv";
+        uv pip install "$@";
     else
-        col red "Failed to create environment '$env_name'.";
+        col yellow "Using pip";
+        pip install "$@";
     fi
-}
-
-_py_activate(){
-    if [[ -z "$1" ]]; then
-        echo "Usage: py activate <env_name>";
-        conda env list;
-        return 1;
-    fi
-
-    \local ask_conda
-    ask_conda="$(PS1="${PS1:-}" $CD 'shell.zsh' activate "$1")" || \return 1
-    \eval "$ask_conda"
-}
-
-py_auto(){
-    if [[ -z "$1" ]]; then
-        echo "Usage: py <env_name>";
-        return 1;
-    fi
-
-    env_name="$1";
-    if ! py_list | awk '{print $1}' | grep -q "^$env_name$"; then
-        read -p "Enter version (3.x): " py_ver;
-        _py_add "$env_name" "$py_ver";
-    fi
-    _py_activate "$env_name";
-    col blue "Using: $(which python3)";
 }
 
 py_remove(){
@@ -85,7 +58,10 @@ py_remove(){
         return 1;
     fi
 
-    conda deactivate;
+    if [[ "$CONDA_DEFAULT_ENV" == "$1" ]]; then
+        conda deactivate;
+    fi
+
     conda remove --name "$1" --all -y;
 }
 
@@ -93,8 +69,25 @@ py_list(){
     ls "$BASE/envs/";
 }
 
+_py_conf(){
+    if [[ -z "$1" ]]; then
+        echo "Usage: py conf <env_name>";
+        return 1;
+    fi
+
+    pip install uv;
+~
+    if [[ -f "requirements.txt" ]]; then
+        uv pip install -r requirements.txt;
+    else
+        uv pip install torch numpy mlx scipy sympy black;
+    fi
+}
+
 case "$1" in
+    conf) _py_conf "$2" ;;
+    i) _py_install "$@" ;;
     remove) py_remove "$2" ;;
     list) py_list ;;
-    *) py_auto "$1" ;;
+    *) _py_add "$1" "$2" ;;
 esac
