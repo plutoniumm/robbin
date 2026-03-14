@@ -30,7 +30,7 @@ _py_add(){
     arc=$(arch);
     col blue "Command for new env '$env_name' on $arc Python $py_ver:";
 
-    cmd="CONDA_SUBDIR=osx-arm64 conda create --name \"$env_name\" python=$py_ver -y --use-index-cache --quiet";
+    cmd="CONDA_SUBDIR=osx-arm64 conda create --name \"$env_name\" python=$py_ver -y --use-index-cache --quiet && conda activate \"$env_name\" && py conf";
     echo "$cmd" | pbcopy;
     echo "Copied to clipboard: $cmd";
 }
@@ -70,11 +70,6 @@ py_list(){
 }
 
 _py_conf(){
-    if [[ -z "$1" ]]; then
-        echo "Usage: py conf <env_name>";
-        return 1;
-    fi
-
     pip install uv;
 ~
     if [[ -f "requirements.txt" ]]; then
@@ -85,7 +80,7 @@ _py_conf(){
 }
 
 case "$1" in
-    conf) _py_conf "$2" ;;
+    conf) _py_conf ;;
     i) _py_install "$@" ;;
     remove) py_remove "$2" ;;
     list) py_list ;;

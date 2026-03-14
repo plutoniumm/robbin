@@ -17,10 +17,7 @@ function dl(){
     cmd="yt-dlp \"$1\" -x --audio-format mp3 --audio-quality 0";
   else
     cmd="yt-dlp \"$1\"";
-    if [[ "$1" == *"twitch.tv"* ]]; then
-      echo $(col yellow "in Twitch mode")
-      cmd="$cmd -f \"[height<=720]\"";
-    elif [[ "$1" == *"youtube.com"* ]]; then
+    if [[ "$1" == *"youtube.com"* ]]; then
       echo $(col yellow "in YouTube mode");
       cmd="$cmd -f \"[height<=720][ext=mp4]\"";
     else

@@ -20,23 +20,24 @@ function token(){
 
 function port(){
   if [ -z "$1" ]; then
-    # list all open ports
-    ports=$(lsof -i tcp -s tcp:listen | grep "IPv4" | awk '{print $9}' | tail -n +3)
-    echo "$ports"
-    # read port
-    read -p "Port to kill: " port
-    # if port is not in list, exit
+    ports=$(lsof -i tcp -s tcp:listen | grep "IPv4" | awk '{printf "%-20s %s\n", $9, $1}' | tail -n +3)
+    echo "$ports";
+    read -p "Port to kill: " port;
+
     if ! echo "$ports" | grep -q "$port"; then
       echo "Port $port is not in list."
       exit 0
     fi
   else
-    port=$1
+    port="$1"
   fi
   pid=$(lsof -i tcp:$port | awk '{print $2}' | tail -n1)
 
-  kill -9 $pid
-  echo "Port $1 is killed."
+  kill -9 "$pid" &>/dev/null || {
+    echo "Error: failed to kill port $port"
+    exit 1
+  }
+  echo "Port $port is killed."
 }
 
 function commit() {
