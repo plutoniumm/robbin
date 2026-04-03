@@ -66,12 +66,12 @@ py_remove(){
 }
 
 py_list(){
-    ls "$BASE/envs/";
+    conda env list;
 }
 
 _py_conf(){
     pip install uv;
-~
+
     if [[ -f "requirements.txt" ]]; then
         uv pip install -r requirements.txt;
     else
@@ -79,9 +79,14 @@ _py_conf(){
     fi
 }
 
+_py_do(){
+    source "$BASE/bin/activate" "$1"
+}
+
 case "$1" in
     conf) _py_conf ;;
     i) _py_install "$@" ;;
+    do) _py_do "$2" ;;
     remove) py_remove "$2" ;;
     list) py_list ;;
     *) _py_add "$1" "$2" ;;

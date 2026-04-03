@@ -4,3 +4,5 @@ local/
 scripts/battery.c*
 dots/tokens
 sol
+.claude/
+dots/continue

@@ -10,7 +10,6 @@ alias docker="podman";
 # ln -s ~/Documents/Applications.nosync/bin/dots/.zshrc ~/.zshrc
 DOC="$HOME/Documents"
 DOW="$HOME/Downloads"
-USER="gojira"
 
 alias github="cd $DOC/GitHub.nosync/ && ls";
 alias iitm="cd $DOC/GitHub.nosync/IITM && ls";
@@ -28,7 +27,10 @@ source "$UBIN/dots/antigen.zsh";
 source "$UBIN/dots/tokens";
 source "$ZSH/oh-my-zsh.sh";
 
-alias llm="OLLAMA_HOST=\"$GOD:11434\" ollama"
+echo 
+
+alias llm="OLLAMA_HOST=\"$GOD:11434\" ollama";
+alias lm="OLLAMA_HOST=\"$DRAGON:11434\" ollama";
 
 antigen bundle zsh-users/zsh-autosuggestions;
 antigen bundle zsh-users/zsh-history-substring-search;
@@ -83,3 +85,9 @@ fi
 unset __conda_setup
 
 export PATH="$HOME/.local/bin:$PATH"
+
+export PATH=/Users/dragon/.opencode/bin:$PATH;
+
+if [ -d "$HOME/.vite-plus" ]; then
+  . "$HOME/.vite-plus/env"
+fi
