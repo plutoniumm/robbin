@@ -1,8 +1,6 @@
 .DS_Store
-beep
 local/
-scripts/battery.c*
 dots/tokens
-sol
 .claude/
 dots/continue
+claude.md

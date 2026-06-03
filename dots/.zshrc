@@ -27,8 +27,9 @@ source "$UBIN/dots/antigen.zsh";
 source "$UBIN/dots/tokens";
 source "$ZSH/oh-my-zsh.sh";
 
-echo 
+echo
 
+alias slm="OLLAMA_HOST=\"$GOJIRA:11434\" ollama";
 alias llm="OLLAMA_HOST=\"$GOD:11434\" ollama";
 alias lm="OLLAMA_HOST=\"$DRAGON:11434\" ollama";
 
@@ -72,17 +73,36 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 export PATH=/Users/god/.opencode/bin:$PATH
 
-__conda_setup="$('/opt/homebrew/Caskroom/miniconda/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh" ]; then
-        . "/opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh"
-    else
-        export PATH="/opt/homebrew/Caskroom/miniconda/base/bin:$PATH"
-    fi
+# conda: detect base across machines, lazy-init so terminal load doesn't hang.
+for __cb in /opt/homebrew/Caskroom/miniconda/base /usr/local/Caskroom/miniconda/base; do
+    [ -x "$__cb/bin/conda" ] && export CONDA_BASE="$__cb" && break
+done
+unset __cb
+if [ -n "$CONDA_BASE" ]; then
+    # stub: first call swaps itself for the real conda (~0.3s hook paid once, on use)
+    conda(){
+        unset -f conda
+        eval "$("$CONDA_BASE/bin/conda" shell.zsh hook)"
+        conda "$@"
+    }
 fi
-unset __conda_setup
+
+# py: activation must run in this shell; everything else delegates to the script.
+py(){
+    case "$1" in
+        ""|conf|i|add|remove|list) command py "$@" ;;
+        do) conda activate "$2" ;;
+        *)
+            if [ -n "$2" ]; then
+                command py "$@"            # py <name> <3.x> -> create flow
+            else
+                local __t
+                __t=$(command py __resolve "$1")  # fuzzy-resolve, listing -> stderr
+                [ -n "$__t" ] && conda activate "$__t"
+            fi
+            ;;
+    esac
+}
 
 export PATH="$HOME/.local/bin:$PATH"
 
@@ -91,3 +111,7 @@ export PATH=/Users/dragon/.opencode/bin:$PATH;
 if [ -d "$HOME/.vite-plus" ]; then
   . "$HOME/.vite-plus/env"
 fi
+# quasar
+export PATH="/Users/dragon/.local/bin:$PATH"
+export PATH="/usr/local/opt/libpcap/bin:$PATH"
+export PATH="/usr/local/opt/ruby/bin:$PATH"

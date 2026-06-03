@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+"""
+neon — turn one or more images into neon-lit versions.
+
+Usage:
+    neon <image> [<image> ...]      # processes each; writes <stem>.neon.png beside each input
+    neon ./*.png                    # glob works — shell expands it
+    neon <image> -o out.png         # custom output path (only valid with one input)
+    neon <image> -p synthwave       # palette: multicolor (default) | synthwave
+    neon <image> -p both            # writes both palettes (.neon.multicolor.png / .neon.synthwave.png)
+    neon <image> --thickness 4      # tube thickness (default 3)
+    neon <image> --canny 10 45      # Canny low/high thresholds
+    neon ./*.jpg -j 8               # 8 workers instead of default 4
+
+Accepts .png, .jpg/.jpeg, .webp, .bmp, .tiff, and .svg
+(SVG is rasterized first; requires cairosvg OR rsvg-convert OR inkscape).
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+
+# ---------------------------------------------------------------------------
+# SVG -> PNG rasterization
+# ---------------------------------------------------------------------------
+
+def rasterize_svg(svg_path: Path, out_png: Path, width: int = 1600) -> Path:
+    """Rasterize an SVG to PNG. Tries cairosvg, rsvg-convert, inkscape."""
+    # 1. cairosvg (python)
+    try:
+        import cairosvg  # type: ignore
+        cairosvg.svg2png(
+            url=str(svg_path),
+            write_to=str(out_png),
+            output_width=width,
+        )
+        return out_png
+    except ImportError:
+        pass
+
+    # 2. rsvg-convert (librsvg)
+    if shutil.which("rsvg-convert"):
+        subprocess.run(
+            ["rsvg-convert", "-w", str(width), "-o", str(out_png), str(svg_path)],
+            check=True,
+        )
+        return out_png
+
+    # 3. inkscape
+    if shutil.which("inkscape"):
+        subprocess.run(
+            ["inkscape", str(svg_path),
+             f"--export-width={width}",
+             "--export-type=png",
+             f"--export-filename={out_png}"],
+            check=True,
+        )
+        return out_png
+
+    raise RuntimeError(
+        "SVG input requires one of: cairosvg (pip install cairosvg), "
+        "rsvg-convert (brew/apt install librsvg), or inkscape."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Core neon pipeline
+# ---------------------------------------------------------------------------
+
+def _screen(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    return 1.0 - (1.0 - a) * (1.0 - b)
+
+
+def _palette_multicolor(img: np.ndarray) -> np.ndarray:
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    H = hsv[:, :, 0].astype(np.int32)
+    S = hsv[:, :, 1]
+    V = hsv[:, :, 2]
+
+    MAGENTA = np.array([230,  40, 255], dtype=np.float32)
+    CYAN    = np.array([255, 230,  60], dtype=np.float32)
+    YELLOW  = np.array([ 40, 240, 255], dtype=np.float32)
+    ORANGE  = np.array([ 30, 130, 255], dtype=np.float32)
+    PURPLE  = np.array([255,  90, 180], dtype=np.float32)
+    LIME    = np.array([ 60, 255, 200], dtype=np.float32)
+
+    red_mask    = ((H < 12) | (H > 165)) & (S > 80) & (V > 60)
+    orange_mask = (H >= 8) & (H < 25) & (S > 120) & (V > 150)
+    yellow_mask = (H >= 20) & (H < 40) & (S > 100)
+    green_mask  = (H >= 35) & (H < 85) & (S > 40)
+    bright_mask = (V > 200) & (S < 60)
+    dark_mask   = (V < 50) & (~red_mask)
+
+    p = np.zeros_like(img, dtype=np.float32)
+    p[:]           = CYAN
+    p[green_mask]  = LIME
+    p[bright_mask] = PURPLE
+    p[dark_mask]   = CYAN
+    p[red_mask]    = MAGENTA
+    p[yellow_mask] = YELLOW
+    p[orange_mask] = ORANGE
+    return p
+
+
+def _palette_synthwave(img: np.ndarray) -> np.ndarray:
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    H = hsv[:, :, 0].astype(np.int32)
+    V = hsv[:, :, 2]
+
+    PINK = np.array([200,  40, 255], dtype=np.float32)
+    CYAN = np.array([255, 220,  60], dtype=np.float32)
+    GOLD = np.array([ 30, 180, 255], dtype=np.float32)
+
+    red_mask    = ((H < 15) | (H > 165)) & (V > 60)
+    bright_mask = V > 200
+
+    p = np.zeros_like(img, dtype=np.float32)
+    p[:]           = CYAN
+    p[red_mask]    = PINK
+    p[bright_mask] = GOLD
+    return p
+
+
+PALETTES = {
+    "multicolor": (_palette_multicolor, (18, 6, 22)),
+    "synthwave":  (_palette_synthwave,  (24, 4, 30)),
+}
+
+
+def neonify(
+    img: np.ndarray,
+    palette_name: str = "multicolor",
+    tube_thickness: int = 3,
+    canny_low: int = 10,
+    canny_high: int = 45,
+    core_brightness: float = 0.35,
+    bloom_intensity: float = 1.6,
+    max_dim_cap: int = 1400,
+) -> np.ndarray:
+    """Apply the neon transform to a BGR image and return a BGR uint8 image."""
+    h, w = img.shape[:2]
+    if max(h, w) > max_dim_cap:
+        s = max_dim_cap / max(h, w)
+        img = cv2.resize(img, (int(w * s), int(h * s)))
+        h, w = img.shape[:2]
+
+    palette_fn, bg_color = PALETTES[palette_name]
+
+    # Edges
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bilateralFilter(gray, 11, 90, 90)
+    edges = cv2.Canny(gray, canny_low, canny_high)
+
+    # Fat(ish) tubes, softened so they look lit
+    kt = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (tube_thickness, tube_thickness))
+    tubes = cv2.dilate(edges, kt, iterations=1).astype(np.float32) / 255.0
+    tubes = cv2.GaussianBlur(tubes, (5, 5), 1.2)
+    tubes3 = tubes[:, :, None]
+
+    # Region palette, blurred so neighbors agree on a color
+    palette = cv2.GaussianBlur(palette_fn(img), (31, 31), 10)
+
+    tube_color = tubes3 * palette
+    tube_color_n = tube_color / 255.0
+
+    # White-hot 1px core
+    core = cv2.GaussianBlur(edges.astype(np.float32) / 255.0, (3, 3), 0.8)
+    core3 = core[:, :, None]
+    core_color = np.ones_like(palette) * 255.0 * 0.7 + palette * 0.3
+    core_layer = core3 * core_color / 255.0 * core_brightness
+
+    # Multi-scale bloom with soft-knee tone mapping
+    max_dim = max(h, w)
+    bloom = np.zeros_like(tube_color_n)
+    for sigma_frac, weight in ((0.004, 1.2), (0.015, 1.0), (0.05, 0.75),
+                               (0.12, 0.5),   (0.25, 0.3)):
+        sigma = max(2, sigma_frac * max_dim)
+        ksize = int(sigma * 6) | 1
+        bloom += cv2.GaussianBlur(tube_color_n, (ksize, ksize), sigma) * weight
+    bloom = 1.0 - np.exp(-np.clip(bloom * bloom_intensity, 0, 4))
+
+    # Dark tinted background
+    bg = np.ones_like(tube_color_n)
+    bg[..., 0] *= bg_color[0] / 255.0
+    bg[..., 1] *= bg_color[1] / 255.0
+    bg[..., 2] *= bg_color[2] / 255.0
+
+    out = _screen(bg, bloom)
+    out = _screen(out, tube_color_n)
+    out = _screen(out, core_layer)
+
+    return np.clip(out * 255.0, 0, 255).astype(np.uint8)
+
+
+# ---------------------------------------------------------------------------
+# Input loading (handles SVG)
+# ---------------------------------------------------------------------------
+
+RASTER_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+
+
+def load_image(path: Path) -> np.ndarray:
+    ext = path.suffix.lower()
+    if ext == ".svg":
+        with tempfile.TemporaryDirectory() as td:
+            tmp_png = Path(td) / "rasterized.png"
+            rasterize_svg(path, tmp_png)
+            img = cv2.imread(str(tmp_png), cv2.IMREAD_COLOR)
+    elif ext in RASTER_EXTS:
+        img = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    else:
+        raise ValueError(
+            f"unsupported extension {ext!r}. "
+            f"Supported: {sorted(RASTER_EXTS | {'.svg'})}"
+        )
+
+    if img is None:
+        raise RuntimeError(f"could not read image at {path}")
+    return img
+
+
+# ---------------------------------------------------------------------------
+# Per-file worker (runs in a subprocess when batching)
+# ---------------------------------------------------------------------------
+
+def process_one(
+    input_path: Path,
+    palette: str,
+    thickness: int,
+    canny: tuple[int, int],
+    explicit_output: Path | None,
+) -> list[Path]:
+    """Process a single input file. Returns list of output paths written."""
+    img = load_image(input_path)
+    stem = input_path.stem  # "foo.bar.png" -> "foo.bar"; "image.png" -> "image"
+
+    if palette == "both":
+        jobs = [
+            ("multicolor", input_path.with_name(f"{stem}.neon.multicolor.png")),
+            ("synthwave",  input_path.with_name(f"{stem}.neon.synthwave.png")),
+        ]
+    else:
+        out_path = explicit_output or input_path.with_name(f"{stem}.neon.png")
+        jobs = [(palette, out_path)]
+
+    written = []
+    for palette_name, out_path in jobs:
+        out = neonify(
+            img,
+            palette_name=palette_name,
+            tube_thickness=thickness,
+            canny_low=canny[0],
+            canny_high=canny[1],
+        )
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        if not cv2.imwrite(str(out_path), out):
+            raise RuntimeError(
+                f"could not write to {out_path} "
+                f"(permissions? disk full? unsupported extension?)"
+            )
+        written.append(out_path)
+    return written
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(
+        prog="neon",
+        description="Turn one or more images into neon-lit versions.",
+    )
+    ap.add_argument("inputs", type=Path, nargs="+",
+                    help="Input image(s). Globs like ./*.png are expanded by the shell.")
+    ap.add_argument("-o", "--output", type=Path, default=None,
+                    help="Output path (only valid with a single input; "
+                         "default: <input>.neon.png)")
+    ap.add_argument("-p", "--palette", default="multicolor",
+                    choices=["multicolor", "synthwave", "both"],
+                    help="Color palette (default: multicolor)")
+    ap.add_argument("--thickness", type=int, default=3,
+                    help="Tube thickness in pixels (default: 3)")
+    ap.add_argument("--canny", type=int, nargs=2, metavar=("LOW", "HIGH"),
+                    default=[10, 45],
+                    help="Canny edge thresholds (default: 10 45)")
+    ap.add_argument("-j", "--jobs", type=int, default=4,
+                    help="Parallel workers (default: 4)")
+    args = ap.parse_args(argv)
+
+    if args.output is not None and len(args.inputs) > 1:
+        sys.exit("error: -o/--output is only valid with a single input file.")
+
+    missing = [p for p in args.inputs if not p.exists()]
+    if missing:
+        sys.exit("error: input(s) not found:\n  " +
+                 "\n  ".join(str(p) for p in missing))
+
+    # Single-file fast path — no pool overhead, errors surface directly
+    if len(args.inputs) == 1:
+        try:
+            outs = process_one(args.inputs[0], args.palette, args.thickness,
+                               tuple(args.canny), args.output)
+        except Exception as e:
+            print(f"error: {args.inputs[0]}: {e}", file=sys.stderr)
+            return 1
+        for p in outs:
+            print(f"wrote {p}")
+        return 0
+
+    # Batch: parallel
+    workers = max(1, min(args.jobs, len(args.inputs)))
+    errors = 0
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        future_to_input = {
+            pool.submit(process_one, p, args.palette, args.thickness,
+                        tuple(args.canny), None): p
+            for p in args.inputs
+        }
+        for fut in as_completed(future_to_input):
+            src = future_to_input[fut]
+            try:
+                for out_path in fut.result():
+                    print(f"wrote {out_path}")
+            except Exception as e:
+                errors += 1
+                print(f"error: {src}: {e}", file=sys.stderr)
+
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

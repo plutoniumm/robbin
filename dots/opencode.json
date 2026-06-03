@@ -20,14 +20,11 @@
         "codestral:22b": {
           "name": "Codestral"
         },
-        "qwen3-coder-next:q4_K_M": {
-          "name": "Qwen3 Coder"
+        "gemma4:26b-a4b-it-q8_0": {
+          "name": "Gemma4"
         },
-        "glm-4.7-flash:latest": {
+        "hf.co/mradermacher/L3.3-The-Omega-Directive-70B-Unslop-v2.1-i1-GGUF:q4_K_M": {
           "name": "GLM 4.7"
-        },
-        "nemotron-cascade-2:30b": {
-          "name": "Nemotron"
         }
       }
     },

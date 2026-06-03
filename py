@@ -1,6 +1,10 @@
 #! /bin/bash
-BASE="/usr/local/Caskroom/miniconda/base"
-CD="/opt/homebrew/bin/conda"
+# conda base differs per machine; prefer the inherited one, else probe both.
+if [[ -z "$BASE" ]]; then
+  for b in "$CONDA_BASE" /opt/homebrew/Caskroom/miniconda/base /usr/local/Caskroom/miniconda/base; do
+    if [[ -x "$b/bin/conda" ]]; then BASE="$b"; break; fi
+  done
+fi
 
 col(){
   case "$1" in
@@ -75,19 +79,78 @@ _py_conf(){
     if [[ -f "requirements.txt" ]]; then
         uv pip install -r requirements.txt;
     else
-        uv pip install torch numpy mlx scipy sympy black;
+        uv pip install torch numpy mlx scipy sympy black ipykernel;
     fi
 }
 
-_py_do(){
-    source "$BASE/bin/activate" "$1"
+# names of all conda envs (env dirs + base), one per line
+_py_envs(){
+    if [[ -d "$BASE/envs" ]]; then
+        for d in "$BASE/envs"/*/; do
+            [[ -d "$d" ]] && basename "$d";
+        done
+    fi
+    echo "base";
+}
+
+# levenshtein distance between $1 and $2
+_lev(){
+    local a="$1" b="$2" la=${#1} lb=${#2} i j cost del ins sub m;
+    local -a prev curr;
+    for ((j=0;j<=lb;j++)); do prev[j]=$j; done
+    for ((i=1;i<=la;i++)); do
+        curr[0]=$i;
+        for ((j=1;j<=lb;j++)); do
+            [[ "${a:i-1:1}" == "${b:j-1:1}" ]] && cost=0 || cost=1;
+            del=$(( prev[j] + 1 ));
+            ins=$(( curr[j-1] + 1 ));
+            sub=$(( prev[j-1] + cost ));
+            m=$del;
+            (( ins < m )) && m=$ins;
+            (( sub < m )) && m=$sub;
+            curr[j]=$m;
+        done
+        for ((j=0;j<=lb;j++)); do prev[j]=${curr[j]}; done
+    done
+    echo "${prev[lb]}";
+}
+
+# resolve a fuzzy env name -> print exact env to stdout, else list to stderr
+_py_resolve(){
+    local q="$1" e d;
+    [[ -z "$q" ]] && return 1;
+    local envs;
+    envs=$(_py_envs);
+
+    # exact match wins
+    while IFS= read -r e; do
+        [[ "$e" == "$q" ]] && { echo "$e"; return 0; }
+    done <<< "$envs";
+
+    # collect everything within 2 edits (covers transposed/switcheroo typos)
+    local cands=();
+    while IFS= read -r e; do
+        d=$(_lev "$q" "$e");
+        (( d <= 2 )) && cands+=("$e");
+    done <<< "$envs";
+
+    if (( ${#cands[@]} == 1 )); then
+        echo "${cands[0]}";
+        return 0;
+    elif (( ${#cands[@]} > 1 )); then
+        { col yellow "Ambiguous '$q' (within 2 edits):"; printf '  %s\n' "${cands[@]}"; } >&2;
+        return 1;
+    fi
+
+    { col red "No env matching '$q'. Available:"; printf '  %s\n' $envs; } >&2;
+    return 1;
 }
 
 case "$1" in
     conf) _py_conf ;;
     i) _py_install "$@" ;;
-    do) _py_do "$2" ;;
     remove) py_remove "$2" ;;
     list) py_list ;;
+    __resolve) _py_resolve "$2" ;;
     *) _py_add "$1" "$2" ;;
 esac

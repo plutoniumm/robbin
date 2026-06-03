@@ -10,29 +10,6 @@ col(){
   esac
 }
 
-# Download via ytdlp: opts=(a, nc)
-function dl(){
-  if [ "$2" = "a" ]; then
-    echo $(col yellow "in Audio mode")
-    cmd="yt-dlp \"$1\" -x --audio-format mp3 --audio-quality 0";
-  else
-    cmd="yt-dlp \"$1\"";
-    if [[ "$1" == *"youtube.com"* ]]; then
-      echo $(col yellow "in YouTube mode");
-      cmd="$cmd -f \"[height<=720][ext=mp4]\"";
-    else
-      echo $(col yellow "in Generic mode");
-    fi
-  fi
-
-  name="$(eval "$cmd --get-filename")";
-  eval "$cmd";
-
-  name2=$(clean "$name");
-  mv "$name" "$name2";
-  echo "$name2 Downloaded";
-}
-
 # Compress Video
 function compress(){
   name="$1";
